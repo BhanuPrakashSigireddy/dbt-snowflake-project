@@ -1,11 +1,14 @@
 {% macro load_discount_data() %}
 
--- 🔍 Debug: Print dbt target values
+-- ✅ Force context (VERY IMPORTANT)
+{% do run_query("USE DATABASE " ~ target.database) %}
+{% do run_query("USE SCHEMA " ~ target.schema) %}
+
+-- 🔍 Debug logs
 {{ log("DBT Target Database: " ~ target.database, info=True) }}
 {{ log("DBT Target Schema: " ~ target.schema, info=True) }}
 {{ log("DBT Target Role: " ~ target.role, info=True) }}
 
--- 🔍 Debug: Check Snowflake session context
 {% set context_query %}
     select current_database(), current_schema(), current_role()
 {% endset %}
@@ -13,13 +16,9 @@
 {% set context_result = run_query(context_query) %}
 
 {% if execute %}
-    {% set db_val = context_result.columns[0].values()[0] %}
-    {% set schema_val = context_result.columns[1].values()[0] %}
-    {% set role_val = context_result.columns[2].values()[0] %}
-
-    {{ log("Snowflake Current DB: " ~ db_val, info=True) }}
-    {{ log("Snowflake Current Schema: " ~ schema_val, info=True) }}
-    {{ log("Snowflake Current Role: " ~ role_val, info=True) }}
+    {{ log("Snowflake Current DB: " ~ context_result.columns[0].values()[0], info=True) }}
+    {{ log("Snowflake Current Schema: " ~ context_result.columns[1].values()[0], info=True) }}
+    {{ log("Snowflake Current Role: " ~ context_result.columns[2].values()[0], info=True) }}
 {% endif %}
 
 
