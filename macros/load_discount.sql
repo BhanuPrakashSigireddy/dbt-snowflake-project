@@ -1,9 +1,33 @@
 {% macro load_discount_data() %}
 
+-- 🔍 Debug: Print dbt target values
+{{ log("DBT Target Database: " ~ target.database, info=True) }}
+{{ log("DBT Target Schema: " ~ target.schema, info=True) }}
+{{ log("DBT Target Role: " ~ target.role, info=True) }}
+
+-- 🔍 Debug: Check Snowflake session context
+{% set context_query %}
+    select current_database(), current_schema(), current_role()
+{% endset %}
+
+{% set context_result = run_query(context_query) %}
+
+{% if execute %}
+    {% set db_val = context_result.columns[0].values()[0] %}
+    {% set schema_val = context_result.columns[1].values()[0] %}
+    {% set role_val = context_result.columns[2].values()[0] %}
+
+    {{ log("Snowflake Current DB: " ~ db_val, info=True) }}
+    {{ log("Snowflake Current Schema: " ~ schema_val, info=True) }}
+    {{ log("Snowflake Current Role: " ~ role_val, info=True) }}
+{% endif %}
+
+
+-- Use db & schema safely
 {% set db = target.database %}
 {% set schema = target.schema %}
 
--- Step 1: Create sequence (FIXED)
+-- Step 1: Create sequence
 {% set seq_query %}
     create or replace sequence {{ db }}.{{ schema }}.WK_TEIRITSU_URIAGE_SEQ
     start = 1
@@ -37,7 +61,7 @@
 
     {{ log("Processing " ~ row_count ~ " rows", info=True) }}
 
-    -- Step 4: INSERT (FIXED target + sequence)
+    -- INSERT
     {% set insert_query %}
         insert into {{ db }}.{{ schema }}.WK_TEIRITSU_URIAGE
         select
@@ -76,7 +100,7 @@
 
     {% do run_query(insert_query) %}
 
-    -- Step 5: UPDATE (FIXED)
+    -- UPDATE
     {% set update_query %}
         update {{ source('raw', 'T_AGENT_DISCOUNT') }}
         set SIO_SEND_DT = current_timestamp
