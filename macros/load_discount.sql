@@ -1,8 +1,11 @@
 {% macro load_discount_data() %}
 
--- Step 1: Create sequence
+{% set db = target.database %}
+{% set schema = target.schema %}
+
+-- Step 1: Create sequence (FIXED)
 {% set seq_query %}
-    create or replace sequence WK_TEIRITSU_URIAGE_SEQ
+    create or replace sequence {{ db }}.{{ schema }}.WK_TEIRITSU_URIAGE_SEQ
     start = 1
     increment = 1
     order
@@ -26,7 +29,6 @@
     {% set row_count = 0 %}
 {% endif %}
 
--- Step 3: Condition
 {% if row_count == 0 %}
 
     {{ log("No data to process", info=True) }}
@@ -35,9 +37,9 @@
 
     {{ log("Processing " ~ row_count ~ " rows", info=True) }}
 
-    -- Step 4: INSERT (NOW EXECUTED)
+    -- Step 4: INSERT (FIXED target + sequence)
     {% set insert_query %}
-        insert into WK_TEIRITSU_URIAGE
+        insert into {{ db }}.{{ schema }}.WK_TEIRITSU_URIAGE
         select
             T_NO,
             CYUMON_NUSI_CD,
@@ -63,7 +65,7 @@
             0,
             NEBIKI_TANKA,
             NULL,
-            WK_TEIRITSU_URIAGE_SEQ.NEXTVAL,
+            {{ db }}.{{ schema }}.WK_TEIRITSU_URIAGE_SEQ.NEXTVAL,
             0,
             0,
             0,
@@ -74,7 +76,7 @@
 
     {% do run_query(insert_query) %}
 
-    -- Step 5: UPDATE (NOW EXECUTED)
+    -- Step 5: UPDATE (FIXED)
     {% set update_query %}
         update {{ source('raw', 'T_AGENT_DISCOUNT') }}
         set SIO_SEND_DT = current_timestamp
